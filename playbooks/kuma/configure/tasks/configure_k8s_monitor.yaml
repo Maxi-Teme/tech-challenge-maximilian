@@ -1,0 +1,54 @@
+---
+- name: Get minikube ip
+  ansible.builtin.command: minikube -p {{ item }} ip
+  register: get_minikube_ip_out
+
+- name: Set variables
+  ansible.builtin.set_fact:
+    monitor_name: "Kubernetes {{ item }}"
+    minikube_ip: "{{ get_minikube_ip_out.stdout }}"
+
+- name: Get monitor
+  lucasheld.uptime_kuma.monitor_info:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    name: "{{ monitor_name }}"
+  register: get_monitor_out
+
+- name: Create monitor
+  lucasheld.uptime_kuma.monitor:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    name: "{{ monitor_name }}"
+    type: http
+    url: https://{{ minikube_ip }}:8443/livez?verbose
+    ignoreTls: true
+  when: not get_monitor_out.monitors.0
+
+- name: Create tag
+  lucasheld.uptime_kuma.tag:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    name: "{{ item }}"
+    color: "{{ kuma.tag_colors[item] }}"
+    state: present
+
+- name: Create monitor tag
+  lucasheld.uptime_kuma.monitor_tag:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    monitor_name: "{{ monitor_name }}"
+    tag_name: "{{ item }}"
+    state: present
+
+- name: Add status page
+  lucasheld.uptime_kuma.status_page:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    slug: "{{ item }}"
+    title: "{{ item }}"
+    state: present
+
+- name: Add monitor to dict
+  ansible.builtin.set_fact:
+    inf_monitors: "{{ inf_monitors | combine({item: inf_monitors[item] + [{'name': monitor_name}]}) }}"

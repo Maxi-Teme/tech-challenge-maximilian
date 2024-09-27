@@ -1,0 +1,78 @@
+---
+# {{ item.0 }} = prod
+# {{ item.1 }} = hello
+
+- name: Get service address
+  ansible.builtin.command: minikube -p {{ item.0 }} service {{ item.1}}-service --url
+  register: get_service_address_out
+
+- name: Get app deployment info
+  ansible.builtin.command: kubectl --context={{ item.0 }} get deployment {{ item.1 }}-deployment -o json
+  register: get_app_deployment_info
+
+- name: Set variables
+  ansible.builtin.set_fact:
+    monitor_name: "{{ item.1 }} {{ item.0 }}"
+    service_address: "{{ get_service_address_out.stdout }}"
+    image_ref: "{{ (get_app_deployment_info.stdout | from_json).spec.template.spec.containers[0].image | split(':') | last }}"
+
+- name: Get monitor
+  lucasheld.uptime_kuma.monitor_info:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    name: "{{ monitor_name }}"
+  register: get_monitor_out
+
+- name: Create monitor
+  lucasheld.uptime_kuma.monitor:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    name: "{{ monitor_name }}"
+    type: http
+    url: "{{ service_address }}/health"
+    ignoreTls: true
+  when: not get_monitor_out.monitors.0
+
+- name: Get monitor
+  lucasheld.uptime_kuma.monitor_info:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    name: "{{ monitor_name }}"
+  register: get_monitor_out
+
+- name: Create monitor environment tag
+  lucasheld.uptime_kuma.monitor_tag:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    monitor_name: "{{ monitor_name }}"
+    tag_name: "{{ item.0 }}"
+    state: present
+
+- name: Get old version tag ids
+  ansible.builtin.set_fact:
+    old_version_tag_ids: "{{ get_monitor_out.monitors[0].tags | selectattr('name', 'equalto', 'version') | rejectattr('value', 'equalto', image_ref) }}"
+
+- name: Remove old version tag
+  lucasheld.uptime_kuma.monitor_tag:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    monitor_name: "{{ monitor_name }}"
+    tag_name: "{{ tag.name }}"
+    value: "{{ tag.value }}"
+    state: absent
+  with_items: "{{ old_version_tag_ids }}"
+  loop_control:
+    loop_var: tag
+
+- name: Create new version tag
+  lucasheld.uptime_kuma.monitor_tag:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    monitor_name: "{{ monitor_name }}"
+    tag_name: version
+    value: "{{ image_ref }}"
+    state: present
+
+- name: Add monitor to dict
+  ansible.builtin.set_fact:
+    app_monitors: "{{ app_monitors | combine({item.0: app_monitors[item.0] + [{'name': monitor_name}]})}}"

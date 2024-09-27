@@ -1,0 +1,12 @@
+---
+- hosts: act
+  tags:
+    - install
+  roles:
+    - install
+
+- hosts: act
+  tags:
+    - runner
+  roles:
+    - runner

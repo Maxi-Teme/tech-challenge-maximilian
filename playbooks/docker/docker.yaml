@@ -1,0 +1,12 @@
+---
+- hosts: docker
+  tags:
+    - install
+  roles:
+    - install
+
+- hosts: docker
+  tags:
+    - registry
+  roles:
+    - registry

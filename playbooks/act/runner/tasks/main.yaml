@@ -1,0 +1,21 @@
+---
+## Prepare Dockerfile
+- name: Ensure temporary working directory
+  ansible.builtin.file:
+    path: /tmp/act_runner
+    state: directory
+
+- name: Copy Dockerfile to working directory
+  ansible.builtin.copy:
+    src: Dockerfile
+    dest: /tmp/act_runner/Dockerfile
+
+- name: Build docker image for runner
+  ansible.builtin.command: 
+    cmd: docker build -t local/act_runner -f Dockerfile .
+    chdir: /tmp/act_runner
+
+- name: Cleanup temporary working directory
+  ansible.builtin.file:
+    path: /tmp/act_runner
+    state: absent

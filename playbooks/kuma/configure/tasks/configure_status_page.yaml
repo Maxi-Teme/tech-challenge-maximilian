@@ -1,0 +1,14 @@
+---
+- name: Add monitors to status page
+  lucasheld.uptime_kuma.status_page:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    slug: "{{ item }}"
+    title: "{{ item }}"
+    publicGroupList:
+      - name: Apps
+        weight: 1
+        monitorList: "{{ app_monitors[item] }}"
+      - name: Infrastructure
+        weight: 2
+        monitorList: "{{ inf_monitors[item] }}"

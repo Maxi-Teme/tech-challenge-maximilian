@@ -1,0 +1,20 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: registry
+spec:
+  ports:
+  - protocol: TCP
+    port: {{ docker.registry_port }}
+    targetPort: {{ docker.registry_port }}
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: registry
+subsets:
+  - addresses:
+      - ip: {{ docker.registry_ip }}
+    ports:
+      - port: {{ docker.registry_port }}

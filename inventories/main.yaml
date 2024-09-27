@@ -1,0 +1,41 @@
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: "/home/nedrise/.virtualenvs/58-tech-challenge/bin/python"
+  children:
+    docker:
+      hosts:
+        localhost:
+    act:
+      hosts:
+        localhost:
+    minikube:
+      hosts:
+        localhost:
+    kuma:
+      hosts:
+        localhost:
+
+  vars:
+    docker:
+      registry_namespace: registry
+      registry_url: registry.registry.svc.cluster.local
+      registry_port: 5000
+      registry_ip: 172.16.1.1
+    minikube:
+      profiles:
+        - dev
+        - stg
+        - prod
+    kuma:
+      url: http://127.0.0.1:3001
+      username: admin
+      password: secret123
+      tag_colors:
+        dev: "#00ff00" # green
+        stg: "#FFA500" # orange
+        prod: "#FF0000" # red
+      apps:
+        - hello
+        - bye

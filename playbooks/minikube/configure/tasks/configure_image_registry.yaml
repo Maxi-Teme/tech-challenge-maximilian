@@ -1,0 +1,23 @@
+---
+- name: Check if registry url in /etc/hosts of minikube instance
+  ansible.builtin.command: minikube -p {{ item }} ssh "cat /etc/hosts | grep {{ docker.registry_url }}"
+  register: check_registry_url_on_minikube_host_out
+  ignore_errors: true
+
+- name: On minikube instance point registry IP to the address of hosts
+  ansible.builtin.command: |
+    minikube -p {{ item }} \
+      ssh "echo \"{{ docker.registry_ip }} {{ docker.registry_url }}\" \
+      | sudo tee -a /etc/hosts"
+  when: check_registry_url_on_minikube_host_out.rc != 0
+
+- name: Ensure registry namespace
+  ansible.builtin.shell: |
+    kubectl --context={{ item }} \
+      create namespace {{ docker.registry_namespace }} \
+      --dry-run=client -o yaml | kubectl --context={{ item }} apply -f -
+
+- name: Apply registry service and endpoint manifest
+  ansible.builtin.command: |
+    kubectl --context={{ item }} apply -n {{ docker.registry_namespace }} \
+      -f /tmp/minikube_configure/registry_service_and_endpoint.yaml

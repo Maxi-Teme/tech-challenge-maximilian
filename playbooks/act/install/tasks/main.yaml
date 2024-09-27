@@ -1,0 +1,9 @@
+---
+- name: Check if act is installed
+  ansible.builtin.command: act --version
+  register: get_act_version_out
+  ignore_errors: true
+
+- name: Install act
+  ansible.builtin.shell: curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+  when: get_act_version_out.rc != 0

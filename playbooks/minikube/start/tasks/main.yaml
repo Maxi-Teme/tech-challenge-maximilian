@@ -1,0 +1,8 @@
+---
+- name: Increase inotify resource limits
+  become: true
+  ansible.builtin.shell: sysctl fs.inotify.max_user_watches=524288 && sysctl fs.inotify.max_user_instances=512
+
+- name: Start minikube instances
+  ansible.builtin.include_tasks: start.yaml
+  with_items: "{{ minikube.profiles }}"

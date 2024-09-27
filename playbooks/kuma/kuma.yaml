@@ -1,0 +1,16 @@
+---
+- hosts: kuma
+  collections:
+    - lucasheld.uptime_kuma
+  tags:
+    - install
+  roles:
+    - install
+
+- hosts: kuma
+  collections:
+    - lucasheld.uptime_kuma
+  tags:
+    - configure
+  roles:
+    - configure

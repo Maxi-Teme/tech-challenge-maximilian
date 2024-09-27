@@ -1,0 +1,13 @@
+---
+- name: Check if minikube is installed
+  ansible.builtin.command: minikube version
+  register: get_minikube_version_out
+  ignore_errors: true
+
+- name: Get minikube binary
+  become: true
+  ansible.builtin.get_url:
+    url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    dest: /usr/local/bin/minikube
+    mode: "655"
+  when: get_minikube_version_out.rc != 0

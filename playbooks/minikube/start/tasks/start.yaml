@@ -1,0 +1,13 @@
+---
+- name: Check if minikube instance is running
+  ansible.builtin.command: minikube -p {{ item }} status
+  register: minikube_status_out
+  ignore_errors: true
+
+- name: Start minikube instance
+  ansible.builtin.command: |
+    minikube -p {{ item }} start \
+      --driver=docker \
+      --container-runtime=containerd \
+      --insecure-registry={{ docker.registry_url }}:{{ docker.registry_port }}
+  when: minikube_status_out.rc != 0

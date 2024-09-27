@@ -1,0 +1,61 @@
+---
+- name: Check if docker registry is running
+  ansible.builtin.shell: docker ps | grep local-registry
+  register: get_docker_registry_out
+  ignore_errors: true
+
+- name: Run docker registry
+  ansible.builtin.command: |
+    docker run -d -p 5000:5000 \
+    --restart always \
+    --volume ~/.registry/storage:/var/lib/registry \
+    --name local-registry registry:2
+  when: get_docker_registry_out.stdout == ""
+
+- name: Edit /etc/hosts to add registry url alias to localhost
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1 {{ docker.registry_url }}"
+
+- name: Set insecure registry entry
+  ansible.builtin.set_fact:
+    insecure_registry: "{{ docker.registry_url }}:{{ docker.registry_port }}"
+
+- name: Check if /etc/docker/daemon.json exists
+  ansible.builtin.stat:
+    path: /etc/docker/daemon.json
+  register: check_daemon_json
+
+- name: Read /etc/docker/daemon.json
+  ansible.builtin.set_fact:
+    daemon_json: "{{ lookup('file', '/etc/docker/daemon.json') | from_json }}"
+  when: check_daemon_json.stat.exists
+
+- name: Add insecure registry to daemon.json
+  ansible.builtin.set_fact:
+    daemon_json: "{{ daemon_json | combine({'insecure-registries': [insecure_registry]}) }}"
+  when: check_daemon_json.stat.exists and daemon_json['insecure-registries'] is undefined
+
+- name: Add insecure registry to daemon.json
+  ansible.builtin.set_fact:
+    daemon_json: "{{ daemon_json | combine({'insecure-registries': daemon_json['insecure-registries'] + [insecure_registry]}) }}"
+  when: check_daemon_json.stat.exists and daemon_json['insecure-registries'] is defined and not daemon_json['insecure-registries'] is contains(insecure_registry)
+
+- name: Write daemon.json
+  become: true
+  ansible.builtin.copy:
+    content: "{{ daemon_json }}"
+    dest: /etc/docker/daemon.json
+  when: check_daemon_json.stat.exists
+
+- name: Create /etc/docker/daemon.json if not exists
+  become: true
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+  when: not check_daemon_json.stat.exists
+
+- name: Configure fixed IP address
+  become: true
+  ansible.builtin.command: ifconfig lo:0 {{ docker.registry_ip }}

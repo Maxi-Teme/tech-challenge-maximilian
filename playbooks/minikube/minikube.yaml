@@ -1,0 +1,18 @@
+---
+- hosts: minikube
+  tags:
+    - install
+  roles:
+    - install
+
+- hosts: minikube
+  tags:
+    - start
+  roles:
+    - start
+
+- hosts: minikube
+  tags:
+    - configure
+  roles:
+    - configure

@@ -1,0 +1,34 @@
+---
+## Prepare kubernetes manifests
+- name: Ensure temporary working directory
+  ansible.builtin.file:
+    path: /tmp/minikube_configure
+    state: directory
+
+- name: Copy registry service and endpoint manifest to working directory
+  ansible.builtin.template:
+    src: registry_service_and_endpoint.yaml.j2
+    dest: /tmp/minikube_configure/registry_service_and_endpoint.yaml
+
+- name: Copy secret.yaml manifest to working directory
+  ansible.builtin.copy:
+    src: secret.yaml
+    dest: /tmp/minikube_configure/secret.yaml
+
+- name: Copy clusterrole.yaml manifest to working directory
+  ansible.builtin.copy:
+    src: clusterrole.yaml
+    dest: /tmp/minikube_configure/clusterrole.yaml
+
+- name: Configure docker image registry
+  ansible.builtin.include_tasks: configure_image_registry.yaml
+  with_items: "{{ minikube.profiles }}"
+
+- name: Create service account and token for deployments
+  ansible.builtin.include_tasks: create_service_account.yaml
+  with_items: "{{ minikube.profiles }}"
+
+- name: Cleanup temporary working directory
+  ansible.builtin.file:
+    path: /tmp/minikube_configure
+    state: absent

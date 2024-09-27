@@ -1,0 +1,41 @@
+---
+- name: Check if kuma is running
+  ansible.builtin.shell: docker ps | grep uptime-kuma
+  register: get_kuma_out
+  ignore_errors: true
+
+- name: Start kuma container
+  ansible.builtin.command: |
+    docker run -d -p 3001:3001 \
+      --restart always \
+      --volume uptime-kuma:/app/data \
+      --network host \
+      --name uptime-kuma \
+      louislam/uptime-kuma:1
+  when: get_kuma_out.stdout == ""
+  register: start_kuma_out
+
+- name: Wait for kuma available
+  ansible.builtin.uri:
+    url: "{{ kuma.url }}"
+    status_code: 200
+  register: wait_for_kuma_out
+  until: wait_for_kuma_out.status == 200
+  retries: 6
+  delay: 10
+
+- name: Check login to kuma
+  lucasheld.uptime_kuma.login:
+    api_url: "{{ kuma.url }}"
+    api_username: "{{ kuma.username }}"
+    api_password: "{{ kuma.password }}"
+  register: initial_login_out
+  ignore_errors: true
+
+- name: Specify the initial username and password
+  lucasheld.uptime_kuma.setup:
+    api_url: "{{ kuma.url }}"
+    api_username: "{{ kuma.username }}"
+    api_password: "{{ kuma.password }}"
+  register: setup_out
+  when: initial_login_out.failed

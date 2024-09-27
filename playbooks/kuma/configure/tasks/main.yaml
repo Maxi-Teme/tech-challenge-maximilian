@@ -1,0 +1,39 @@
+---
+- name: Login to kuma
+  lucasheld.uptime_kuma.login:
+    api_url: http://127.0.0.1:3001
+    api_username: "{{ kuma.username }}"
+    api_password: "{{ kuma.password }}"
+  register: login_out
+
+- name: Set token
+  ansible.builtin.set_fact:
+    api_token: "{{ login_out.token }}"
+
+- name: Create version tag
+  lucasheld.uptime_kuma.tag:
+    api_url: "{{ kuma.url }}"
+    api_token: "{{ api_token }}"
+    name: version
+    color: "#A9A9A9" # gray
+    state: present
+
+- name: Set variables to collect monitor names
+  ansible.builtin.set_fact:
+    inf_monitors: "{{ inf_monitors | d({}) | combine({item: []}) }}"
+    app_monitors: "{{ app_monitors | d({}) | combine({item: []}) }}"
+  with_items: "{{ minikube.profiles }}"
+
+- name: Configure monitor for each k8s server
+  ansible.builtin.include_tasks: configure_k8s_monitor.yaml
+  with_items: "{{ minikube.profiles }}"
+
+- name: Configure monitor for each app
+  ansible.builtin.include_tasks: configure_app_monitor.yaml
+  with_nested:
+    - "{{ minikube.profiles }}"
+    - "{{ kuma.apps }}"
+
+- name: Configure status pages
+  ansible.builtin.include_tasks: configure_status_page.yaml
+  with_items: "{{ minikube.profiles }}"
