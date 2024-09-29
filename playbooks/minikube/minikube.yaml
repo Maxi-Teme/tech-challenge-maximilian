@@ -7,12 +7,14 @@
 
 - hosts: minikube
   tags:
+    - noinstall
     - start
   roles:
     - start
 
 - hosts: minikube
   tags:
+    - noinstall
     - configure
   roles:
     - configure

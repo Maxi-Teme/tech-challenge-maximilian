@@ -2,7 +2,7 @@ all:
   hosts:
     localhost:
       ansible_connection: local
-      ansible_python_interpreter: "/home/nedrise/.virtualenvs/58-tech-challenge/bin/python"
+      ansible_python_interpreter: "/home/nedrise/.virtualenvs/58-tech-challenge/bin/python" # TODO: Replace with your full path to the python interpreter of your virtual environment
   children:
     docker:
       hosts:
@@ -23,6 +23,7 @@ all:
       registry_url: registry.registry.svc.cluster.local
       registry_port: 5000
       registry_ip: 172.16.1.1
+
     minikube:
       profiles:
         - dev
